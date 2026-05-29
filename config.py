@@ -31,7 +31,8 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 MODELS = {
     "gemma_26b": "gemma-4-26b-a4b-it",   # 26B 모델 ID
     "gemma_31b": "gemma-4-31b-it",       # 31B 모델 ID
-    "embedding": "gemini-embedding-001", # 오답노트 의미검색용 임베딩
+    "embedding": "gemini-embedding-2", # 오답노트 의미검색용 임베딩 (Embedding 2)
+
 }
 
 

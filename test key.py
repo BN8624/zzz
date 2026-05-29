@@ -1,66 +1,70 @@
 # =============================================================
 #  test_key.py  ―  "키와 모델이 진짜 작동하나?" 확인용 테스트
+#                  (새 라이브러리 google-genai 버전)
 # -------------------------------------------------------------
-#  이 파일은 시스템의 일부가 아닙니다.
-#  딱 한 번, 시작 전에 다음을 확인하려고 만든 검사 도구입니다.
+#  이 파일은 시스템의 일부가 아닙니다. 시작 전 한 번만 확인용입니다.
 #    1) .env 의 API 키를 제대로 읽었는가?
 #    2) 26B 모델이 실제로 응답하는가?
 #    3) 31B 모델이 실제로 응답하는가?
 #
-#  실행:  python test_key.py
-#  결과:  두 모델 모두 "✅ 성공" 이 나오면 다음 단계로 진행.
-#         하나라도 "❌ 실패" 면, 그 에러 메시지를 보고 원인을 찾습니다.
+#  실행:  python3 "test key.py"   (파일명에 공백 있으면 따옴표 필요)
+#  결과:  두 모델 모두 "OK 성공" 이면 다음 단계로.
+#
+#  *** 구글이 라이브러리를 바꿨습니다 ***
+#    옛: google-generativeai  (genai.configure / GenerativeModel)
+#    새: google-genai         (genai.Client / client.models...)
+#    이 파일은 "새 방식"으로 작성됐습니다.
 # =============================================================
 
-import google.generativeai as genai
+from google import genai            # 새 라이브러리
 from config import GOOGLE_API_KEY, MODELS
 
 
 # -------------------------------------------------------------
-#  먼저 키가 비어있지 않은지부터 확인합니다.
-#  (.env 를 안 만들었거나 이름을 틀리면 키가 None 입니다.)
+#  키가 비어있지 않은지 먼저 확인.
 # -------------------------------------------------------------
 if not GOOGLE_API_KEY:
-    print("❌ API 키를 못 읽었습니다.")
-    print("   → .env 파일에 GOOGLE_API_KEY=... 가 있는지 확인하세요.")
+    print("[X] API 키를 못 읽었습니다.")
+    print("   -> .env 파일에 GOOGLE_API_KEY=... 가 있는지 확인하세요.")
     raise SystemExit(1)
 
-print(f"🔑 키 읽기 성공 (앞 6자리: {GOOGLE_API_KEY[:6]}...)\n")
+print(f"[KEY] 키 읽기 성공 (앞 6자리: {GOOGLE_API_KEY[:6]}...)\n")
 
-# 라이브러리에 키를 등록합니다.
-genai.configure(api_key=GOOGLE_API_KEY)
+# 새 방식: Client 객체를 하나 만들어 두고 재사용합니다.
+client = genai.Client(api_key=GOOGLE_API_KEY)
 
 
 # -------------------------------------------------------------
 #  모델 하나를 실제로 호출해보는 함수.
-#  성공하면 응답 일부를, 실패하면 에러를 보여줍니다.
 # -------------------------------------------------------------
 def test_one(label, model_id):
     print(f"테스트 중: {label} ({model_id})")
     try:
-        model = genai.GenerativeModel(model_id)
-        response = model.generate_content("Say OK")
+        response = client.models.generate_content(
+            model=model_id,
+            contents="Say OK",
+        )
         text = (response.text or "").strip()
-        print(f"  ✅ 성공 — 응답: {text[:40]}\n")
+        print(f"  [OK] 성공 - 응답: {text[:40]}\n")
         return True
     except Exception as e:
-        print(f"  ❌ 실패 — {e}\n")
+        print(f"  [X] 실패 - {e}\n")
         return False
 
 
 # -------------------------------------------------------------
-#  26B 와 31B 둘 다 테스트합니다.
+#  26B / 31B 둘 다 테스트.
 # -------------------------------------------------------------
 ok_26 = test_one("26B", MODELS["gemma_26b"])
 ok_31 = test_one("31B", MODELS["gemma_31b"])
 
 
 # -------------------------------------------------------------
-#  최종 결과 안내
+#  최종 결과 안내.
 # -------------------------------------------------------------
 if ok_26 and ok_31:
-    print("🎉 두 모델 모두 정상! 다음 단계로 진행하세요.")
+    print("[DONE] 두 모델 모두 정상! 다음 단계로 진행하세요.")
 else:
-    print("⚠️  실패한 모델이 있습니다. 위 에러 메시지를 확인하세요.")
-    print("   - 모델 이름이 틀렸을 수도 있고")
-    print("   - 키 권한 문제일 수도 있습니다.")
+    print("[WARN] 실패한 모델이 있습니다. 위 에러 메시지를 확인하세요.")
+    print("   - 429 면 -> 하루 한도 초과(태평양 자정에 리셋)")
+    print("   - 그 외면 -> 모델 이름 또는 키 권한 문제")
